@@ -2376,7 +2376,8 @@ local function CreateReader(input_string)
 				local byte1, byte2, byte3, byte4 = string_byte(input, input_next_byte_pos, input_next_byte_pos + 3)
 				-- This requires lua number to be at least double ()
 				cache = cache
-					+ ((byte1 or 0) + (byte2 or 0) * 256 + (byte3 or 0) * 65536 + (byte4 or 0) * 16777216) * lshift_mask
+					+ ((byte1 or 0) + (byte2 or 0) * 256 + (byte3 or 0) * 65536 + (byte4 or 0) * 16777216)
+						* lshift_mask
 				input_next_byte_pos = input_next_byte_pos + 4
 				cache_bitlen = cache_bitlen + 32
 			end

@@ -53,21 +53,23 @@ urlInput.BorderSizePixel = 0
 urlInput.Position = UDim2.fromScale(0.0238, 0.345)
 urlInput.Size = UDim2.fromScale(0.26, 0.1)
 
-do local textLabel = Instance.new("TextLabel")
-textLabel.Name = "TextLabel"
-textLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json")
-textLabel.Text = "URL"
-textLabel.TextColor3 = Color3.fromRGB(235, 235, 235)
-textLabel.TextScaled = true
-textLabel.TextSize = 14
-textLabel.TextWrapped = true
-textLabel.Active = true
-textLabel.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
-textLabel.BorderSizePixel = 0
-textLabel.Position = UDim2.fromScale(0.0815, -0.52)
-textLabel.Selectable = true
-textLabel.Size = UDim2.fromScale(0.829, 0.514)
-textLabel.Parent = urlInput end
+do
+	local textLabel = Instance.new("TextLabel")
+	textLabel.Name = "TextLabel"
+	textLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json")
+	textLabel.Text = "URL"
+	textLabel.TextColor3 = Color3.fromRGB(235, 235, 235)
+	textLabel.TextScaled = true
+	textLabel.TextSize = 14
+	textLabel.TextWrapped = true
+	textLabel.Active = true
+	textLabel.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
+	textLabel.BorderSizePixel = 0
+	textLabel.Position = UDim2.fromScale(0.0815, -0.52)
+	textLabel.Selectable = true
+	textLabel.Size = UDim2.fromScale(0.829, 0.514)
+	textLabel.Parent = urlInput
+end
 
 urlInput.Parent = controlsGui
 
