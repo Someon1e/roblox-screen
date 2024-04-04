@@ -54,26 +54,27 @@ SOFTWARE.
 local function openGif(data: buffer)
 	local offset = 0
 
-	local function readByte()
-		offset += 1
-		return buffer.readu8(data, offset - 1)
-	end
 	local function readString(length)
 		offset += length
 		return buffer.readstring(data, offset - length, offset)
 	end
-	local function readU16()
-		offset += 2
-		return buffer.readu16(data, offset - 2)
-	end
-
 	local format = readString(6)
 	if format ~= "GIF87a" and format ~= "GIF89a" then
 		error("wrong file format")
 	end
 
+	local function readU16()
+		offset += 2
+		return buffer.readu16(data, offset - 2)
+	end
+
 	local gifWidth, gifHeight = readU16(), readU16()
 	assert(gifWidth ~= 0 and gifHeight ~= 0, "wrong file format")
+
+	local function readByte()
+		offset += 1
+		return buffer.readu8(data, offset - 1)
+	end
 
 	local globalFlags = readByte()
 	offset += 2
