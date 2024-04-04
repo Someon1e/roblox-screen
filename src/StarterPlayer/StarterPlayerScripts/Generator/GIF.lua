@@ -244,7 +244,7 @@ local function openGif(data: buffer)
 		local bitsInCode = bitsInColor + 1
 		local nextPowerOfTwo = 2 ^ bitsInCode
 
-		local firstUndefinedCode
+		local firstUndefinedCode = CLEARVOC + 2
 		local needCompletion = false
 
 		local streamBitBuffer = 0
@@ -261,17 +261,6 @@ local function openGif(data: buffer)
 		end
 
 		assert(readCodeFromStream() == CLEARVOC, "wrong file format")
-
-		local function clearLZWVoc()
-			table.clear(LZWVocPrefixCodes)
-			table.clear(LZWVocColorIndices)
-			bitsInCode = bitsInColor + 1
-			nextPowerOfTwo = 2 ^ bitsInCode
-			firstUndefinedCode = CLEARVOC + 2
-			needCompletion = false
-		end
-
-		clearLZWVoc()
 
 		-- Copy matrix backgroundMatrixAfterLoadedFrame to loadedFrameMatrix
 
@@ -291,7 +280,12 @@ local function openGif(data: buffer)
 			-- the code (firstUndefinedCode-1) has defined only its first component
 			local code = readCodeFromStream()
 			if code == CLEARVOC then
-				clearLZWVoc()
+				table.clear(LZWVocPrefixCodes)
+				table.clear(LZWVocColorIndices)
+				bitsInCode = bitsInColor + 1
+				nextPowerOfTwo = 2 ^ bitsInCode
+				firstUndefinedCode = CLEARVOC + 2
+				needCompletion = false
 			elseif code ~= ENDOFSTREAM then
 				assert(code < firstUndefinedCode, "wrong file format")
 				local stackOfPixels = {}
