@@ -90,14 +90,14 @@ local function openGif(data: buffer)
 	local firstFrameOffset = offset
 
 	local fileParameters -- initially nil, filled after finishing first pass
-	local fpComment, fpLoopedAnimation -- for storing parameters before first pass completed
-	local fpNumberOfFrames = 0
-	local fpLastProcessedOffset = 0
+	local fileParametersComment, fileParametersLoopedAnimation -- for storing parameters before first pass completed
+	local fileParametersNumberOfFrames = 0
+	local fileParametersLastProcessedOffset = 0
 
 	local function fpFirstPass()
 		if not fileParameters then
-			if offset > fpLastProcessedOffset then
-				fpLastProcessedOffset = offset
+			if offset > fileParametersLastProcessedOffset then
+				fileParametersLastProcessedOffset = offset
 				return true
 			end
 		end
@@ -129,12 +129,12 @@ local function openGif(data: buffer)
 			if starter == 0x3B then -- EOF marker
 				if fpFirstPass() then
 					fileParameters =
-						{ Comment = fpComment, Looped = fpLoopedAnimation, NumberOfImages = fpNumberOfFrames }
+						{ Comment = fileParametersComment, Looped = fileParametersLoopedAnimation, NumberOfImages = fileParametersNumberOfFrames }
 				end
 				return "EOF"
 			elseif starter == 0x2C then -- image marker
 				if fpFirstPass() then
-					fpNumberOfFrames = fpNumberOfFrames + 1
+					fileParametersNumberOfFrames = fileParametersNumberOfFrames + 1
 				end
 				if callback2C then
 					return callback2C()
@@ -145,7 +145,7 @@ local function openGif(data: buffer)
 				local fnNo = readByte()
 				if fnNo == 0xF9 then
 					callback21F9_or_skipToEndOfBlock()
-				elseif fnNo == 0xFE and not fpComment then
+				elseif fnNo == 0xFE and not fileParametersComment then
 					local fpCommentTable = {}
 					local fpIndex = 0
 					repeat
@@ -153,9 +153,9 @@ local function openGif(data: buffer)
 						fpIndex += 1
 						fpCommentTable[fpIndex] = readString(size)
 					until size == 0
-					fpComment = table.concat(fpCommentTable)
+					fileParametersComment = table.concat(fpCommentTable)
 				elseif fnNo == 0xFF and readString(readByte()) == "NETSCAPE2.0" then
-					fpLoopedAnimation = true
+					fileParametersLoopedAnimation = true
 					skipToEndOfBlock()
 				else
 					skipToEndOfBlock()
@@ -449,7 +449,7 @@ local function openGif(data: buffer)
 		if loadNextFrame() then
 			return true
 		else
-			if ({ true, fpLoopedAnimation })[loopingModeNo] then -- looping now
+			if ({ true, fileParametersLoopedAnimation })[loopingModeNo] then -- looping now
 				loadedFrameNo = 0
 				return loadNextFrame()
 			else
