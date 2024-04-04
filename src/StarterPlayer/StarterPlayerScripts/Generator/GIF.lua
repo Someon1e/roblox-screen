@@ -128,8 +128,11 @@ local function openGif(data: buffer)
 			local starter = readByte()
 			if starter == 0x3B then -- EOF marker
 				if fpFirstPass() then
-					fileParameters =
-						{ Comment = fileParametersComment, Looped = fileParametersLoopedAnimation, NumberOfImages = fileParametersNumberOfFrames }
+					fileParameters = {
+						Comment = fileParametersComment,
+						Looped = fileParametersLoopedAnimation,
+						NumberOfImages = fileParametersNumberOfFrames,
+					}
 				end
 				return "EOF"
 			elseif starter == 0x2C then -- image marker
@@ -282,39 +285,6 @@ local function openGif(data: buffer)
 
 		local pixelsRemained = width * height
 		local xInsideWindow: number, yInsideWindow: number -- coordinates inside window
-		local function pixelFromStream(colorIndex)
-			pixelsRemained = pixelsRemained - 1
-			if 0 > pixelsRemained then
-				error("wrong file format")
-			end
-			if xInsideWindow then
-				xInsideWindow = xInsideWindow + 1
-				if xInsideWindow == width then
-					xInsideWindow = 0
-					if interlaced then
-						repeat
-							if yInsideWindow % 8 == 0 then
-								yInsideWindow = if yInsideWindow < height then yInsideWindow + 8 else 4
-							elseif yInsideWindow % 4 == 0 then
-								yInsideWindow = if yInsideWindow < height then yInsideWindow + 8 else 2
-							elseif yInsideWindow % 2 == 0 then
-								yInsideWindow = if yInsideWindow < height then yInsideWindow + 4 else 1
-							else
-								yInsideWindow = yInsideWindow + 2
-							end
-						until yInsideWindow < height
-					else
-						yInsideWindow = yInsideWindow + 1
-					end
-				end
-			else
-				xInsideWindow, yInsideWindow = 0, 0
-			end
-			if colorIndex ~= loadedFrameTransparentColorIndex then
-				loadedFrameMatrix[top + yInsideWindow + 1][left + xInsideWindow + 1] =
-					assert(palette[colorIndex], "wrong file format")
-			end
-		end
 
 		repeat
 			-- all the codes (CLEARVOC+2)...(firstUndefinedCode-2) are defined completely
@@ -341,7 +311,38 @@ local function openGif(data: buffer)
 				end
 				-- send pixels for phrase "code" to result matrix
 				for p = pos, 1, -1 do
-					pixelFromStream(stackOfPixels[p])
+					local colorIndex = stackOfPixels[p]
+					pixelsRemained = pixelsRemained - 1
+					if 0 > pixelsRemained then
+						error("wrong file format")
+					end
+					if xInsideWindow then
+						xInsideWindow = xInsideWindow + 1
+						if xInsideWindow == width then
+							xInsideWindow = 0
+							if interlaced then
+								repeat
+									if yInsideWindow % 8 == 0 then
+										yInsideWindow = if yInsideWindow < height then yInsideWindow + 8 else 4
+									elseif yInsideWindow % 4 == 0 then
+										yInsideWindow = if yInsideWindow < height then yInsideWindow + 8 else 2
+									elseif yInsideWindow % 2 == 0 then
+										yInsideWindow = if yInsideWindow < height then yInsideWindow + 4 else 1
+									else
+										yInsideWindow = yInsideWindow + 2
+									end
+								until yInsideWindow < height
+							else
+								yInsideWindow = yInsideWindow + 1
+							end
+						end
+					else
+						xInsideWindow, yInsideWindow = 0, 0
+					end
+					if colorIndex ~= loadedFrameTransparentColorIndex then
+						loadedFrameMatrix[top + yInsideWindow + 1][left + xInsideWindow + 1] =
+							assert(palette[colorIndex], "wrong file format")
+					end
 				end
 				if firstUndefinedCode < 0x1000 then
 					-- create new code
