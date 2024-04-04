@@ -234,8 +234,8 @@ local function openGif(data: buffer)
 		local CLEARVOC = 2 ^ bitsInColor
 		local ENDOFSTREAM = CLEARVOC + 1
 
-		local LZWVocPrefixCodes
-		local LZWVocColorIndices
+		local LZWVocPrefixCodes = {}
+		local LZWVocColorIndices = {}
 
 		local bitsInCode = bitsInColor + 1
 		local nextPowerOfTwo = 2 ^ bitsInCode
@@ -259,8 +259,8 @@ local function openGif(data: buffer)
 		assert(readCodeFromStream() == CLEARVOC, "wrong file format")
 
 		local function clearLZWVoc()
-			LZWVocPrefixCodes = {}
-			LZWVocColorIndices = {}
+			table.clear(LZWVocPrefixCodes)
+			table.clear(LZWVocColorIndices)
 			bitsInCode = bitsInColor + 1
 			nextPowerOfTwo = 2 ^ bitsInCode
 			firstUndefinedCode = CLEARVOC + 2
@@ -396,7 +396,7 @@ local function openGif(data: buffer)
 		if loadedFrameNo == 0 then
 			backgroundMatrixAfterLoadedFrame = table.create(gifHeight)
 			for y = 1, gifHeight do
-				backgroundMatrixAfterLoadedFrame[y] = {}
+				backgroundMatrixAfterLoadedFrame[y] = table.create(gifWidth)
 			end
 
 			backgroundRectangleToEraseLeft = 0
