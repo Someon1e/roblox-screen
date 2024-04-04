@@ -234,7 +234,9 @@ local function openGif(data: buffer)
 		local CLEARVOC = 2 ^ bitsInColor
 		local ENDOFSTREAM = CLEARVOC + 1
 
-		local LZWVoc -- [code] = {prefixCode, colorIndex}
+		local LZWVocPrefixCodes
+		local LZWVocColorIndices
+
 		local bitsInCode = bitsInColor + 1
 		local nextPowerOfTwo = 2 ^ bitsInCode
 
@@ -257,7 +259,8 @@ local function openGif(data: buffer)
 		assert(readCodeFromStream() == CLEARVOC, "wrong file format")
 
 		local function clearLZWVoc()
-			LZWVoc = {}
+			LZWVocPrefixCodes = {}
+			LZWVocColorIndices = {}
 			bitsInCode = bitsInColor + 1
 			nextPowerOfTwo = 2 ^ bitsInCode
 			firstUndefinedCode = CLEARVOC + 2
@@ -313,7 +316,6 @@ local function openGif(data: buffer)
 		end
 
 		repeat
-			-- LZWVoc: [code] = {prefixCode, colorIndex}
 			-- all the codes (CLEARVOC+2)...(firstUndefinedCode-2) are defined completely
 			-- the code (firstUndefinedCode-1) has defined only its first component
 			local code = readCodeFromStream()
@@ -325,14 +327,13 @@ local function openGif(data: buffer)
 				local pos = 1
 				local firstPixel = code
 				while firstPixel >= CLEARVOC do
-					local data = LZWVoc[firstPixel]
-					firstPixel, stackOfPixels[pos] = data[1], data[2]
+					firstPixel, stackOfPixels[pos] = LZWVocPrefixCodes[firstPixel], LZWVocColorIndices[firstPixel]
 					pos = pos + 1
 				end
 				stackOfPixels[pos] = firstPixel
 				if needCompletion then
 					needCompletion = false
-					LZWVoc[firstUndefinedCode - 1][2] = firstPixel
+					LZWVocColorIndices[firstUndefinedCode - 1] = firstPixel
 					if code == firstUndefinedCode - 1 then
 						stackOfPixels[1] = firstPixel
 					end
@@ -343,7 +344,7 @@ local function openGif(data: buffer)
 				end
 				if firstUndefinedCode < 0x1000 then
 					-- create new code
-					LZWVoc[firstUndefinedCode] = { code }
+					LZWVocPrefixCodes[firstUndefinedCode] = code
 					needCompletion = true
 					if firstUndefinedCode == nextPowerOfTwo then
 						bitsInCode = bitsInCode + 1
