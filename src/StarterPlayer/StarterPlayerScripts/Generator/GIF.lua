@@ -441,16 +441,15 @@ local function openGif(data: buffer)
 		return loadedFrameDelay
 	end
 
-	local loopingModes = { never = 0, always = 1, play = 2 }
 	function gif.NextImage(loopingMode: ("never" | "always" | "play")?)
 		-- switches to next image, returns true/false, false means failed to switch
-		-- loopingMode = "never"/"always"/"play"
-		local loopingModeNo = loopingModes[loopingMode or "never"]
-		assert(loopingModeNo, "wrong looping mode")
 		if loadNextFrame() then
 			return true
-		else
-			if ({ true, fileParametersLoopedAnimation })[loopingModeNo] then -- looping now
+		else -- Reached the end
+			loopingMode = loopingMode or "never"
+			assert(loopingMode == "never" or loopingMode == "always" or loopingMode == "play", "wrong looping mode")
+			if loopingMode == "never" then return false end
+			if loopingMode == "always" or (loopingMode == "play" and fileParametersLoopedAnimation) then -- looping now
 				loadedFrameNo = 0
 				return loadNextFrame()
 			else
