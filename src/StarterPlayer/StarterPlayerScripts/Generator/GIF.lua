@@ -51,10 +51,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ]]
 
-local function openGif(stringData: string)
+local function openGif(data: buffer)
 	local offset = 0
 
-	local data = buffer.fromstring(stringData)
 	local function readByte()
 		offset += 1
 		return buffer.readu8(data, offset - 1)

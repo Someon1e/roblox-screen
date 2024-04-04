@@ -17,7 +17,8 @@ httpGet.OnServerInvoke = function(player, url, useCache)
 	end
 
 	local success, data = pcall(HttpService.GetAsync, HttpService, url)
-	cache[url] = { success, data }
+	local dataBuffer = buffer.fromstring(data)
+	cache[url] = { success, dataBuffer :: any }
 
-	return success, data
+	return success, dataBuffer
 end

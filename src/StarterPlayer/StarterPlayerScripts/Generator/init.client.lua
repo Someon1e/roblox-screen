@@ -317,7 +317,8 @@ drawButton.Activated:Connect(function()
 
 			local previousData
 
-			local success, data = httpGet(urlInput.Text)
+			local success, dataBuffer = httpGet(urlInput.Text)
+			local data = buffer.tostring(dataBuffer)
 
 			if not success then
 				error(data)
@@ -331,7 +332,7 @@ drawButton.Activated:Connect(function()
 				end
 			else
 				previousData = data
-				drawFromGifData(data)
+				drawFromGifData(dataBuffer)
 			end
 		until not looped or not isDrawing
 	end, warn)
