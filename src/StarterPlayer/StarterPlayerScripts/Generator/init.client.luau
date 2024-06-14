@@ -17,7 +17,7 @@ local parsePng = png.parse
 
 local gif = require(script:WaitForChild("GIF"))
 
--- Make controls guis
+-- Make controls interface
 
 local controlsGui = Instance.new("ScreenGui")
 controlsGui.Name = "Controls"
