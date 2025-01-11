@@ -161,11 +161,12 @@ local function makeImageLabel(widthInPixels: number, heightInPixels: number)
 	return imageLabel
 end
 
-local function makeImage(pixels: { number }, xResolution: number, yResolution: number)
-	local drawingEditable = Instance.new("EditableImage")
+local function makeImage(pixels: buffer, xResolution: number, yResolution: number)
+	local drawingEditable = game:GetService("AssetService"):CreateEditableImage({
+		Size = Vector2.new(xResolution, yResolution),
+	})
 
-	drawingEditable.Size = Vector2.new(xResolution, yResolution)
-	drawingEditable:WritePixels(Vector2.zero, Vector2.new(xResolution, yResolution), pixels)
+	drawingEditable:WritePixelsBuffer(Vector2.zero, Vector2.new(xResolution, yResolution), pixels)
 
 	return drawingEditable
 end
@@ -209,22 +210,22 @@ local function drawFromPngData(data)
 	print("Decoded in", clock() - startTime, "seconds")
 
 	-- Turn the data into an array of RGBA
-	local pixels = table.create(width * height * 4)
+	local pixels = buffer.create(width * height * 4)
 	local i = 0
 	for y = 1, height do
 		for x = 1, width do
 			local r, g, b, a = getPixel(x, y)
-			pixels[i + 1] = r / 255
-			pixels[i + 2] = g / 255
-			pixels[i + 3] = b / 255
-			pixels[i + 4] = a / 255
+			buffer.writeu8(pixels, i, r)
+			buffer.writeu8(pixels, i + 1, g)
+			buffer.writeu8(pixels, i + 2, b)
+			buffer.writeu8(pixels, i + 3, a or 255)
 			i += 4
 		end
 	end
 
 	local editable = makeImage(pixels, width, height)
 	local image = makeImageLabel(editable.Size.X, editable.Size.Y)
-	editable.Parent = image
+	image.ImageContent = Content.fromObject(editable)
 	swapCurrentImageFor(image)
 	isDrawing = false
 end
@@ -235,7 +236,7 @@ local function parseGifFrames(data): { { image: ImageLabel, delayInMiliseconds: 
 	local parsed = gif(data)
 	local width, height = parsed.Width, parsed.Height
 
-	local pixels = table.create(width * height * 4, 0)
+	local pixels = buffer.create(width * height * 4)
 
 	local number = 0
 	local frames = {}
@@ -249,10 +250,10 @@ local function parseGifFrames(data): { { image: ImageLabel, delayInMiliseconds: 
 					local color = (hex - b) / 256
 					local g = color % 256
 					local r = (color - g) / 256
-					pixels[i + 1] = r / 255
-					pixels[i + 2] = g / 255
-					pixels[i + 3] = b / 255
-					pixels[i + 4] = 1
+					buffer.writeu8(pixels, i, r)
+					buffer.writeu8(pixels, i + 1, g)
+					buffer.writeu8(pixels, i + 2, b)
+					buffer.writeu8(pixels, i + 3, 255)
 				end
 				i += 4
 			end
@@ -260,7 +261,7 @@ local function parseGifFrames(data): { { image: ImageLabel, delayInMiliseconds: 
 
 		local editable = makeImage(pixels, width, height)
 		local image = makeImageLabel(width, height)
-		editable.Parent = image
+		image.ImageContent = Content.fromObject(editable)
 		table.insert(frames, {
 			image = image,
 			delayInMiliseconds = assert(parsed.GetFrameDelayInMs(), "missing frame delay"),
@@ -277,7 +278,6 @@ local function parseGifFrames(data): { { image: ImageLabel, delayInMiliseconds: 
 			return nil
 		end
 
-		table.clear(pixels)
 		number += 1
 		print("Decoding GIF frame number", number)
 		if number % 10 == 0 then
