@@ -230,7 +230,7 @@ local function drawFromPngData(data)
 	isDrawing = false
 end
 
-local function parseGifFrames(data): { { image: ImageLabel, delayInMiliseconds: number } }?
+local function parseGifFrames(data): { { image: ImageLabel, delayInMilliseconds: number } }?
 	local startTime = clock()
 
 	local parsed = gif(data)
@@ -264,7 +264,7 @@ local function parseGifFrames(data): { { image: ImageLabel, delayInMiliseconds: 
 		image.ImageContent = Content.fromObject(editable)
 		table.insert(frames, {
 			image = image,
-			delayInMiliseconds = assert(parsed.GetFrameDelayInMs(), "missing frame delay"),
+			delayInMilliseconds = assert(parsed.GetFrameDelayInMs(), "missing frame delay"),
 		})
 
 		if not parsed.NextImage() then
@@ -294,7 +294,7 @@ local function drawFromGifData(data)
 
 	for _, frame in frames do
 		swapCurrentImageFor(frame.image)
-		task.wait(assert(frame.delayInMiliseconds) / 1000)
+		task.wait(assert(frame.delayInMilliseconds) / 1000)
 
 		if not isDrawing then
 			-- Cancelled
