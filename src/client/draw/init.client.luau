@@ -142,43 +142,28 @@ local isDrawing = false
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-local function makeImageLabel(widthInPixels: number, heightInPixels: number)
-	local imageLabel = Instance.new("ImageLabel")
-	imageLabel.Size = UDim2.fromScale(0.6, 0.6)
+local imageLabel = Instance.new("ImageLabel")
+imageLabel.Size = UDim2.fromScale(0.6, 0.6)
 
-	local ratio = Instance.new("UIAspectRatioConstraint")
-	ratio.AspectRatio = widthInPixels / heightInPixels
-	ratio.Parent = imageLabel
+local ratio = Instance.new("UIAspectRatioConstraint")
+ratio.Parent = imageLabel
 
-	imageLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-	imageLabel.BackgroundTransparency = 0.5
-	imageLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-	imageLabel.Position = UDim2.fromScale(0.5, 0.5)
-	imageLabel.Visible = false
+imageLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+imageLabel.BackgroundTransparency = 0.5
+imageLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+imageLabel.Position = UDim2.fromScale(0.5, 0.5)
+imageLabel.Visible = true
 
-	imageLabel.Parent = screenGui
+imageLabel.Parent = screenGui
 
-	return imageLabel
-end
-
-local function makeImage(pixels: buffer, xResolution: number, yResolution: number)
-	local drawingEditable = game:GetService("AssetService"):CreateEditableImage({
-		Size = Vector2.new(xResolution, yResolution),
-	})
-
-	drawingEditable:WritePixelsBuffer(Vector2.zero, Vector2.new(xResolution, yResolution), pixels)
-
-	return drawingEditable
-end
-
-local activeImage: ImageLabel
-local function swapCurrentImageFor(image: ImageLabel)
-	local oldImage = activeImage
-	activeImage = image
-	activeImage.Visible = true
-	if oldImage then
-		oldImage.Visible = false
+local activeEditable
+local function swapCurrentEditableFor(editable: EditableImage)
+	local oldEditable = activeEditable
+	if oldEditable then
+		oldEditable:Destroy()
 	end
+	activeEditable = editable
+	imageLabel.ImageContent = Content.fromObject(editable)
 end
 
 local httpCache = {}
@@ -223,23 +208,29 @@ local function drawFromPngData(data)
 		end
 	end
 
-	local editable = makeImage(pixels, width, height)
-	local image = makeImageLabel(editable.Size.X, editable.Size.Y)
-	image.ImageContent = Content.fromObject(editable)
-	swapCurrentImageFor(image)
+	local editable = game:GetService("AssetService"):CreateEditableImage({
+		Size = Vector2.new(width, height),
+	})
+
+	editable:WritePixelsBuffer(Vector2.zero, Vector2.new(width, height), pixels)
+
+	ratio.AspectRatio = editable.Size.X / editable.Size.Y
+	swapCurrentEditableFor(editable)
 	isDrawing = false
 end
 
-local function parseGifFrames(data): { { image: ImageLabel, delayInMilliseconds: number } }?
-	local startTime = clock()
-
+local function drawFromGifData(data)
 	local parsed = gif(data)
 	local width, height = parsed.Width, parsed.Height
 
 	local pixels = buffer.create(width * height * 4)
 
+	local editable = game:GetService("AssetService"):CreateEditableImage({
+		Size = Vector2.new(width, height),
+	})
+	ratio.AspectRatio = editable.Size.X / editable.Size.Y
+
 	local number = 0
-	local frames = {}
 	while true do
 		local i = 0
 		for y, row in parsed.ReadMatrix() do
@@ -258,51 +249,52 @@ local function parseGifFrames(data): { { image: ImageLabel, delayInMilliseconds:
 				i += 4
 			end
 		end
+		editable:WritePixelsBuffer(Vector2.zero, Vector2.new(width, height), pixels)
+		if number == 0 then
+			swapCurrentEditableFor(editable)
+		end
 
-		local editable = makeImage(pixels, width, height)
-		local image = makeImageLabel(width, height)
-		image.ImageContent = Content.fromObject(editable)
-		table.insert(frames, {
-			image = image,
-			delayInMilliseconds = assert(parsed.GetFrameDelayInMs(), "missing frame delay"),
-		})
-
-		if not parsed.NextImage() then
-			-- Finished all frames
-			print("Decoded GIF in", clock() - startTime, "seconds")
-			return frames
+		if not parsed.NextImage(if looped and not httpCache then "always" else "never") then
+			break
 		end
 
 		if not isDrawing then
 			-- Cancelled
-			return nil
+			break
 		end
 
 		number += 1
 		print("Decoding GIF frame number", number)
-		if number % 10 == 0 then
-			task.wait()
-		end
+		task.wait(assert(parsed.GetFrameDelayInMs()) / 1000)
 	end
 end
 
-local function drawFromGifData(data)
-	local frames = parseGifFrames(data)
-	if not frames then
-		return
-	end
+local function drawFromUrl()
+	local previousData
+	repeat
+		local startTime = clock()
 
-	for _, frame in frames do
-		swapCurrentImageFor(frame.image)
-		task.wait(assert(frame.delayInMilliseconds) / 1000)
+		local success, dataBuffer = httpGet(urlInput.Text)
+		local data = buffer.tostring(dataBuffer)
 
-		if not isDrawing then
-			-- Cancelled
-			return
+		if not success then
+			error(data)
 		end
-	end
-end
+		print("Fetched in", clock() - startTime, "seconds")
 
+		if string.sub(data, 1, 8) == "\137PNG\r\n\26\n" then
+			if data ~= previousData then
+				previousData = data
+				drawFromPngData(data)
+			end
+		else
+			previousData = data
+			drawFromGifData(dataBuffer)
+		end
+
+		task.wait()
+	until not looped
+end
 drawButton.Activated:Connect(function()
 	if isDrawing then
 		isDrawing = false
@@ -311,31 +303,7 @@ drawButton.Activated:Connect(function()
 	isDrawing = true
 	screenGui.Enabled = true
 
-	xpcall(function()
-		repeat
-			local startTime = clock()
-
-			local previousData
-
-			local success, dataBuffer = httpGet(urlInput.Text)
-			local data = buffer.tostring(dataBuffer)
-
-			if not success then
-				error(data)
-			end
-			print("Fetched in", clock() - startTime, "seconds")
-
-			if string.sub(data, 1, 8) == "\137PNG\r\n\26\n" then
-				if data ~= previousData then
-					previousData = data
-					drawFromPngData(data)
-				end
-			else
-				previousData = data
-				drawFromGifData(dataBuffer)
-			end
-		until not looped or not isDrawing
-	end, warn)
+	xpcall(drawFromUrl, warn)
 end)
 
 hideButton.Activated:Connect(function()
